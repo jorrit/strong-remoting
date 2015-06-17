@@ -6,6 +6,7 @@ var express = require('express');
 var request = require('supertest');
 var fs = require('fs');
 var es = require('event-stream');
+var EventSource = require('eventsource');
 
 describe('strong-remoting', function() {
   var app;
@@ -54,12 +55,13 @@ describe('a function returning a ReadableStream', function() {
   var remotes = RemoteObjects.create();
   var streamClass;
   var server;
+  var app;
 
   before(function(done) {
     var test = this;
     // NOTE: Date object will not be coerced back into a Date
     var data = test.data = [{foo: 'bar'}, 'bat', false, 0, null];
-    var app = express();
+    app = express();
     server = app.listen(0, '127.0.0.1', done);
     function StreamClass() {
 
@@ -79,7 +81,7 @@ describe('a function returning a ReadableStream', function() {
 
     streamClass = new SharedClass('StreamClass', StreamClass);
 
-    streamClass.defineMethod('createStream', {
+    this.createStreamMethod = streamClass.defineMethod('createStream', {
       isStatic: true,
       fn: StreamClass.createStream,
       returns: [{
@@ -129,6 +131,46 @@ describe('a function returning a ReadableStream', function() {
       });
 
       stream.on('end', done);
+    });
+  });
+
+  describe('an http client requesting a stream as an event source', function() {
+    before(function(done) {
+      var server = this.server = app.listen(done);
+      this.port = server.address().port;
+    })
+    before(function() {
+      var test = this;
+      this.url = 'http://localhost:' + this.port;
+    });
+
+    it('should respond with an event stream', function(done) {
+      var es = new EventSource(this.url + '/StreamClass/createStream');
+      var testData = this.data;
+      var result = [];
+
+      es.on('data', function(e) {
+        result.push(JSON.parse(e.data));
+      });
+
+      es.on('end', function() {
+        expect(testData).to.eql(result);
+        done();
+      });
+    });
+
+    it('should respond with an event stream with errors', function(done) {
+      var es = new EventSource(this.url + '/StreamClass/createStreamWithError');
+
+      es.on('error', function(e) {
+        var err = JSON.parse(e.data);
+        expect(err.message).to.equal('test error');
+        done();
+      });
+    });
+
+    after(function() {
+      this.server.close();
     });
   });
 });

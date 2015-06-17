@@ -25,6 +25,7 @@
     "mux-demux": "^3.7.9",
     "qs": "^2.2.3",
     "request": "^2.42.0",
+    "sse": "0.0.6",
     "traverse": "^0.6.6",
     "xml2js": "^0.4.4"
   },
@@ -33,6 +34,7 @@
     "browserify": "~5.11.1",
     "chai": "^1.10.0",
     "event-stream": "^3.3.1",
+    "eventsource": "^0.1.6",
     "grunt": "~0.4.5",
     "grunt-browserify": "~3.0.1",
     "grunt-cli": "^0.1.13",
